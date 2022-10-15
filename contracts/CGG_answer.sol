@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.4;
+pragma solidity ^0.8.7;
 
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
@@ -18,7 +18,7 @@ contract CGG is AccessControlEnumerable, ERC20Burnable, ERC20Pausable, ERC20Vote
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
-    uint256 public constant maxSupply = 10 ** 12 * (10 ** 18);
+    uint256 public maxSupply = 10 ** 12 * (10 ** 18);
     string private constant TOKEN_NAME = "CGG";
 
     uint256 public tradingEnabledTimestamp = 1628258400;
