@@ -18,6 +18,7 @@ contract CGG is AccessControlEnumerable, ERC20Burnable, ERC20Pausable, ERC20Vote
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+    // total supply is not capped
     uint256 public maxSupply = 10 ** 12 * (10 ** 18);
     string private constant TOKEN_NAME = "CGG";
 
