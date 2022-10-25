@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-contract ICO is ERC20, ERC20Pausable, Ownable, ReentrancyGuard {
+contract ICOGoRunner is ERC20, ERC20Pausable, Ownable, ReentrancyGuard {
 
     struct UserInfo{
         bool contributed;

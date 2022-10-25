@@ -1,67 +1,106 @@
-// SPDX-License-Identifier: MIT
+// License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-// import from node_modules @openzeppelin/contracts v4.0
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-/**
-  *@title Initial Coin Offerring(ICO) contract
-*/
-contract ICO is ERC20, Ownable, ReentrancyGuard {
+contract ICO is ERC20, ERC20Pausable, Ownable, ReentrancyGuard {
 
-    // constructor() public ERC20("_name", "_symbol") {
-    //  // mint to `msg.sender`
-    //  _mint(msg.sender, _amount*(10**uint256(decimals())));
-    //  // mint to `_address`
-    //  _mint(_address, _amount*(10**uint256(decimals())));
-    // }
+    struct UserInfo{
+        bool contributed;
+        uint256 contributedAmount;
+        bool firstClaimable;
+        bool secondClaimable;
+    }
+    mapping(address => UserInfo) public contributors;
+    uint256 public numberOfContributors = 0;
+    uint256 public totalContributedAmount = 0;
+    ERC20 public currToken;
+    uint256 public ICOStartTime = 1666695689;
+    uint256 public ICOEndTime = 1669374089;
+    uint256 public maxTotalContributionAmount = 0.1 ether;
+    uint256 public singleContributionAmountUnit = 0.01 ether;
 
-    // Sample constructor
-    constructor() ERC20("BasicCoin", "BSC") {
-        _mint(msg.sender, 1000000*(10**uint256(decimals())));
+    // constructor
+    constructor() ERC20("ICO", "ICO") {
+        _pause();
     }
 
-    /**
-      * @param account (type address) address of recipient
-      * @param amount (type uint256) amount of token
-      * @dev function use to mint token
-    */
-    function mint(address account, uint256 amount) public onlyOwner returns (bool sucess) {
-        require(account != address(0) && amount != uint256(0), "ERC20: function mint invalid input");
-        _mint(account, amount);
-        return true;
+    modifier onlyEOA() {
+        require(msg.sender == tx.origin, "ICO: not eoa");
+        _;
     }
 
-    /**
-      * @param account (type address) address of recipient
-      * @param amount (type uint256) amount of token
-      * @dev function use to burn token
-    */
-    function burn(address account, uint256 amount) public onlyOwner returns (bool success) {
-        require(account != address(0) && amount != uint256(0), "ERC20: function burn invalid input");
-        _burn(account, amount);
-        return true;
+    function setICOToken(address currTokenAddress) whenPaused public onlyOwner {
+        currToken = ERC20(currTokenAddress);
+    }
+
+    function pause() onlyOwner external {
+        _pause();
+    }
+
+    function unpause() onlyOwner external {
+        _unpause();
     }
 
     /**
       * @dev function to buy token with ether
     */
-    function buy() public payable nonReentrant returns (bool sucess) {
-        require(msg.sender.balance >= msg.value && msg.value != 0 ether, "ICO: function buy invalid input");
-        uint256 amount = msg.value * 1000;
-        _transfer(owner(), _msgSender(), amount);
+    function contribute() payable nonReentrant onlyEOA external returns (bool success) {
+        require(block.timestamp>=ICOStartTime && block.timestamp<=ICOEndTime,
+            "ICO: not in ICO time");
+        require(totalContributedAmount + msg.value <= maxTotalContributionAmount,
+            'ICO: max contribution amount reached');
+        require(msg.value <= maxTotalContributionAmount,
+            'ICO: cannot exceed maxTotalContributionAmount ');
+        require((msg.value / (singleContributionAmountUnit*100)/100) % 10 == 0,
+            'ICO: contribution should be Contribution Unit or the times of Contribution Unit');
+
+        UserInfo storage user = contributors[msg.sender];
+
+//        require(user.contributedAmount+msg.value <= maxTotalContributionAmount,
+//            "ICO: max contribution amount 1 BNB per user reached'");
+
+        if(!user.contributed){
+            user.contributed = true;
+            user.firstClaimable = true;
+            user.secondClaimable = true;
+            numberOfContributors++;
+            user.contributedAmount = msg.value;
+        }else{
+            user.contributedAmount += msg.value;
+        }
+        totalContributedAmount += msg.value;
         return true;
     }
 
-    /**
-      * @param amount (type uint256) amount of ether
-      * @dev function use to withdraw ether from contract
-    */
-    function withdraw(uint256 amount) public onlyOwner returns (bool success) {
-        require(amount <= address(this).balance, "ICO: function withdraw invalid input");
-        payable(_msgSender()).transfer(amount);
+
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal virtual override(ERC20, ERC20Pausable) {
+        super._beforeTokenTransfer(from, to, amount);
+    }
+
+    /*
+     * @dev Pull out all balance of token or BNB in this contract. When tokenAddress_ is 0x0, will transfer all BNB to the admin owner.
+     */
+    function pullFunds(address tokenAddress_) public onlyOwner returns (bool success) {
+        if (tokenAddress_ == address(0)) {
+            payable(_msgSender()).transfer(address(this).balance);
+        } else {
+            IERC20 token = IERC20(tokenAddress_);
+            token.transfer(_msgSender(), token.balanceOf(address(this)));
+        }
         return true;
     }
+
+    function isContributor(address candidate_) public view returns (bool) {
+        UserInfo storage user = contributors[candidate_];
+        return user.contributed;
+    }
+
 }
